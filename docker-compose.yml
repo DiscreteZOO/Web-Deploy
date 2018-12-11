@@ -1,0 +1,112 @@
+version: '3.6'
+
+services:
+  ##
+  ## Nginx entry point
+  ##
+  nginx:
+    image: jwilder/nginx-proxy:alpine
+    
+    labels:
+      - com.github.jrcs.letsencrypt_nginx_proxy_companion.nginx_proxy=true      
+    
+    volumes:
+      - "/var/run/docker.sock:/tmp/docker.sock:ro"
+      - "nginx_dhparam:/etc/nginx/dhparam"
+      - "nginx_html:/usr/share/nginx/html"
+      - "nginx_vhost:/etc/nginx/vhost.d"
+      - "nginx_certs:/etc/nginx/certs"
+       
+    depends_on:
+    - frontend
+    - backend
+    
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - dzinternal
+      - default
+  
+  ##
+  ## Letsencrypt-Companion
+  ##
+  letsencrypt:
+    image: jrcs/letsencrypt-nginx-proxy-companion
+    
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "nginx_dhparam:/etc/nginx/dhparam"
+      - "nginx_html:/usr/share/nginx/html"
+      - "nginx_vhost:/etc/nginx/vhost.d"
+      - "nginx_certs:/etc/nginx/certs"
+
+    depends_on:
+      - nginx
+    
+    networks:
+      - dzinternal
+  
+  ##
+  ## Frontend
+  ##
+  frontend:
+    image: discretezoo/web-frontend
+    
+    environment:
+      REACT_APP_ZOOAPI: https://${DZ_API_DOMAIN}
+
+      VIRTUAL_PORT: 8080
+      VIRTUAL_HOST: ${DZ_DOMAIN}
+      LETSENCRYPT_HOST: ${DZ_DOMAIN}
+      LETSENCRYPT_EMAIL: ${LE_EMAIL}
+    
+    networks:
+      - dzinternal
+  
+  ##
+  ## Backend
+  ##
+  backend:
+    image: discretezoo/web-backend
+    depends_on:
+      - db
+
+    environment:
+      ZOODB_JDBC: "jdbc:postgresql://db:5432/${DZ_USER}"
+      ZOODB_USER: ${DZ_USER}
+      ZOODB_PASS: ${DZ_PASSWORD}
+
+      VIRTUAL_PORT: 8080
+      VIRTUAL_HOST: ${DZ_API_DOMAIN}
+      LETSENCRYPT_HOST: ${DZ_API_DOMAIN}
+      LETSENCRYPT_EMAIL: ${LE_EMAIL}
+    
+    networks:
+      - dzinternal
+  
+  ##
+  ## Database
+  ##
+  db:
+    image: postgres
+
+    environment:
+      POSTGRES_USER: ${DZ_USER}
+      POSTGRES_PASSWORD: ${DZ_PASSWORD}
+    
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    
+    networks:
+      - dzinternal  
+  
+networks:
+  dzinternal:
+
+volumes:
+  postgres:
+  nginx_dhparam:
+  nginx_html:
+  nginx_vhost:
+  nginx_certs:
