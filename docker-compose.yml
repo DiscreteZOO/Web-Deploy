@@ -18,8 +18,10 @@ services:
       - "nginx_certs:/etc/nginx/certs"
        
     depends_on:
-    - frontend
-    - backend
+    - frontendjoe
+    - frontendmath
+    - backendjoe
+    - backendmath
     
     ports:
       - "80:80"
@@ -50,15 +52,29 @@ services:
   ##
   ## Frontend
   ##
-  frontend:
-    image: discretezoo/web-frontend
+  frontendjoe:
+    image: discretezoo/mbgen-frontend:joe
     
     environment:
-      REACT_APP_ZOOAPI: https://${DZ_API_DOMAIN}
+      REACT_APP_ZOOAPI: https://${JOE_DZ_API_DOMAIN}
 
       VIRTUAL_PORT: 8080
-      VIRTUAL_HOST: ${DZ_DOMAIN}
-      LETSENCRYPT_HOST: ${DZ_DOMAIN}
+      VIRTUAL_HOST: ${JOE_DZ_DOMAIN}
+      LETSENCRYPT_HOST: ${JOE_DZ_DOMAIN}
+      LETSENCRYPT_EMAIL: ${LE_EMAIL}
+    
+    networks:
+      - dzinternal
+
+  frontendmath:
+    image: discretezoo/mbgen-frontend:mathilde
+    
+    environment:
+      REACT_APP_ZOOAPI: https://${MATH_DZ_API_DOMAIN}
+
+      VIRTUAL_PORT: 8080
+      VIRTUAL_HOST: ${MATH_DZ_DOMAIN}
+      LETSENCRYPT_HOST: ${MATH_DZ_DOMAIN}
       LETSENCRYPT_EMAIL: ${LE_EMAIL}
     
     networks:
@@ -67,8 +83,8 @@ services:
   ##
   ## Backend
   ##
-  backend:
-    image: discretezoo/web-backend
+  backendjoe:
+    image: discretezoo/mbgen-backend:joe
     depends_on:
       - db
 
@@ -78,8 +94,26 @@ services:
       ZOODB_PASS: ${DZ_PASSWORD}
 
       VIRTUAL_PORT: 8080
-      VIRTUAL_HOST: ${DZ_API_DOMAIN}
-      LETSENCRYPT_HOST: ${DZ_API_DOMAIN}
+      VIRTUAL_HOST: ${JOE_DZ_API_DOMAIN}
+      LETSENCRYPT_HOST: ${JOE_DZ_API_DOMAIN}
+      LETSENCRYPT_EMAIL: ${LE_EMAIL}
+    
+    networks:
+      - dzinternal
+
+  backendmath:
+    image: discretezoo/mbgen-backend:mathilde
+    depends_on:
+      - db
+
+    environment:
+      ZOODB_JDBC: "jdbc:postgresql://db:5432/${DZ_USER}"
+      ZOODB_USER: ${DZ_USER}
+      ZOODB_PASS: ${DZ_PASSWORD}
+
+      VIRTUAL_PORT: 8080
+      VIRTUAL_HOST: ${MATH_DZ_API_DOMAIN}
+      LETSENCRYPT_HOST: ${MATH_DZ_API_DOMAIN}
       LETSENCRYPT_EMAIL: ${LE_EMAIL}
     
     networks:
