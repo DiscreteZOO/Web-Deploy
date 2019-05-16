@@ -1,56 +1,6 @@
 version: '3.6'
 
-services:
-  ##
-  ## Nginx entry point
-  ##
-  nginx:
-    restart: always
-    image: jwilder/nginx-proxy:alpine
-    
-    labels:
-      - com.github.jrcs.letsencrypt_nginx_proxy_companion.nginx_proxy=true      
-    
-    volumes:
-      - "/var/run/docker.sock:/tmp/docker.sock:ro"
-      - "nginx_dhparam:/etc/nginx/dhparam"
-      - "nginx_html:/usr/share/nginx/html"
-      - "nginx_vhost:/etc/nginx/vhost.d"
-      - "nginx_certs:/etc/nginx/certs"
-       
-    depends_on:
-    - frontendjoe
-    - frontendmath
-    - backendjoe
-    - backendmath
-    
-    ports:
-      - "80:80"
-      - "443:443"
-    networks:
-      - dzinternal
-      - default
-  
-  ##
-  ## Letsencrypt-Companion
-  ##
-  letsencrypt:
-    restart: always
-    image: jrcs/letsencrypt-nginx-proxy-companion
-    
-    volumes:
-      - "/var/run/docker.sock:/var/run/docker.sock:ro"
-      - "nginx_dhparam:/etc/nginx/dhparam"
-      - "nginx_html:/usr/share/nginx/html"
-      - "nginx_vhost:/etc/nginx/vhost.d"
-      - "nginx_certs:/etc/nginx/certs"
-
-    depends_on:
-      - nginx
-    
-    networks:
-      - dzinternal
-  
+services:  
   ##
   ## Frontend
   ##
@@ -65,9 +15,6 @@ services:
       VIRTUAL_HOST: ${JOE_DZ_DOMAIN}
       LETSENCRYPT_HOST: ${JOE_DZ_DOMAIN}
       LETSENCRYPT_EMAIL: ${LE_EMAIL}
-    
-    networks:
-      - dzinternal
 
   frontendmath:
     restart: always
@@ -80,9 +27,6 @@ services:
       VIRTUAL_HOST: ${MATH_DZ_DOMAIN}
       LETSENCRYPT_HOST: ${MATH_DZ_DOMAIN}
       LETSENCRYPT_EMAIL: ${LE_EMAIL}
-    
-    networks:
-      - dzinternal
   
   frontendjane:
     restart: always
@@ -95,18 +39,13 @@ services:
       VIRTUAL_HOST: ${JANE_DZ_DOMAIN}
       LETSENCRYPT_HOST: ${JANE_DZ_DOMAIN}
       LETSENCRYPT_EMAIL: ${LE_EMAIL}
-    
-    networks:
-      - dzinternal
   
   ##
-  ## Backend
+  ## Backends
   ##
   backendjoe:
     restart: always
     image: discretezoo/mbgen-backend:joe
-    depends_on:
-      - db
 
     environment:
       ZOODB_JDBC: "jdbc:postgresql://db:5432/${DZ_USER}"
@@ -117,16 +56,10 @@ services:
       VIRTUAL_HOST: ${JOE_DZ_API_DOMAIN}
       LETSENCRYPT_HOST: ${JOE_DZ_API_DOMAIN}
       LETSENCRYPT_EMAIL: ${LE_EMAIL}
-    
-    networks:
-      - dzinternal
 
   backendmath:
     restart: always
     image: discretezoo/mbgen-backend:mathilde
-    depends_on:
-      - db
-
     environment:
       ZOODB_JDBC: "jdbc:postgresql://db:5432/${DZ_USER}"
       ZOODB_USER: ${DZ_USER}
@@ -136,15 +69,10 @@ services:
       VIRTUAL_HOST: ${MATH_DZ_API_DOMAIN}
       LETSENCRYPT_HOST: ${MATH_DZ_API_DOMAIN}
       LETSENCRYPT_EMAIL: ${LE_EMAIL}
-    
-    networks:
-      - dzinternal
   
   backendjane:
     restart: always
     image: discretezoo/mbgen-backend:jane
-    depends_on:
-      - db
 
     environment:
       ZOODB_JDBC: "jdbc:postgresql://db:5432/${DZ_USER}"
@@ -156,32 +84,7 @@ services:
       LETSENCRYPT_HOST: ${JANE_DZ_API_DOMAIN}
       LETSENCRYPT_EMAIL: ${LE_EMAIL}
 
-    networks:
-      - dzinternal
-  
-  ##
-  ## Database
-  ##
-  db:
-    restart: always
-    image: postgres
-
-    environment:
-      POSTGRES_USER: ${DZ_USER}
-      POSTGRES_PASSWORD: ${DZ_PASSWORD}
-    
-    volumes:
-      - postgres:/var/lib/postgresql/data
-    
-    networks:
-      - dzinternal  
-  
 networks:
-  dzinternal:
-
-volumes:
-  postgres:
-  nginx_dhparam:
-  nginx_html:
-  nginx_vhost:
-  nginx_certs:
+  default:
+    external:
+      name: web-deploy_dzinternal
